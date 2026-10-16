@@ -486,7 +486,7 @@ function drawWho() {
     : '赤本記録';
 }
 
-var STYLE_BASE = ['全学部', '学部個別', '共通テスト併用', '公募', '前期', '中期', '後期'];
+var STYLE_BASE = ['全学部', '学部個別', '共テ併用', '公募', '前期', '中期', '後期'];
 var CHIP_MAX = 10;
 
 function chipHtml(list, kind) {
@@ -561,9 +561,11 @@ function drawAgain() {
   if (!btn) return;
   var r = EDIT_ID ? null : lastRecord();
   if (!r) { btn.className = 'again hide'; return; }
-  var who = r.univ + (r.fac ? ' ' + r.fac : '');
+  var who = r.univ
+    + (r.fac ? ' ' + r.fac : '')
+    + (r.style ? ' ' + r.style : '');
   btn.className = 'again';
-  btn.textContent = '前回と同じ（' + who + '）を入れる';
+  btn.textContent = '前回と同じ（' + who + '）';
 }
 
 function useLast() {
