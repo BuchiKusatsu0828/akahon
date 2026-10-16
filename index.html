@@ -131,6 +131,12 @@
     font-size:12.5px;font-weight:700;line-height:1.6}
   .purpose.send{background:#FDF3F3;color:var(--red)}
   .purpose.keep{background:#F1F7F1;color:#2E7D32}
+  .purpose.mode{background:#FBF3E4;color:#8A5A00}
+  .openhint{
+    margin-top:14px;padding:11px 13px;background:#FBF3E4;border-left:4px solid #B8860B;
+    font-size:13px;line-height:1.8
+  }
+  .openhint b{color:#8A5A00}
   .mixup{margin-top:12px;font-size:13px;line-height:1.8;color:#333}
   .mixup b{color:var(--red)}
 
@@ -163,6 +169,8 @@
       <span>記録を編集しています</span>
       <button type="button" onclick="cancelEdit()">やめる</button>
     </div>
+
+    <div class="openhint hide" id="openHint"></div>
 
     <label>解いた日</label>
     <input type="date" id="fDate">
@@ -242,6 +250,18 @@
 
   <!-- ===== 設定 ===== -->
   <section id="paneC" class="hide">
+
+    <div class="sec">
+      <h3>いまの開き方</h3>
+      <div class="purpose mode" id="modeBox"></div>
+      <p>
+        Safariから開いたときと、ホーム画面のアイコンから開いたときでは、
+        記録が<b>別々に保存されます</b>。いつも同じ開き方をしてください。<br><br>
+        開き方を変えたいときや、記録が分かれてしまったときは、
+        いま記録がある側で<b>「記録を書き出す」</b>→ 新しく使いたい側で<b>「復元する」</b>。
+        これで引き継げます。
+      </p>
+    </div>
 
     <div class="sec">
       <h3>先生に送る</h3>
@@ -339,6 +359,39 @@ var UNIV_LIST = [
   '早稲田大学','慶應義塾大学','上智大学','東京理科大学','明治大学','青山学院大学',
   '立教大学','中央大学','法政大学','学習院大学','南山大学','名城大学'
 ];
+
+/* ============ いまの開き方 ============ */
+/** ホーム画面のアイコンから開いているか（iOS / Android 共通で判定） */
+function isStandalone() {
+  try {
+    if (window.navigator && window.navigator.standalone === true) return true;
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  } catch (e) {}
+  return false;
+}
+
+function modeLabel() {
+  return isStandalone() ? 'ホーム画面のアイコン' : 'ブラウザ（Safariなど）';
+}
+
+function drawOpenHint() {
+  var mb = document.getElementById('modeBox');
+  if (mb) mb.textContent = 'いまは ' + modeLabel() + ' から開いています';
+
+  var el = document.getElementById('openHint');
+  if (!el) return;
+
+  if (DATA.records.length) { el.className = 'openhint hide'; return; }
+
+  var other = isStandalone() ? 'ブラウザ（Safariなど）' : 'ホーム画面のアイコン';
+  el.className = 'openhint';
+  el.innerHTML =
+    '<b>前に記録したものが見当たりませんか？</b><br>'
+    + 'いまは <b>' + modeLabel() + '</b> から開いています。'
+    + '<b>' + other + '</b> で記録したぶんは、ここには表示されません。<br>'
+    + '記録は開き方ごとに別々に保存されます。<b>いつも同じ開き方</b>をしてください。<br>'
+    + '移したいときは、記録がある側の「設定」で書き出して、こちらで復元できます。';
+}
 
 /* ============ 保存と読み込み ============ */
 function load() {
@@ -732,6 +785,7 @@ function withNth(list) {
 }
 
 function render() {
+  drawOpenHint();
   var rs = withNth(DATA.records);
   document.getElementById('tTotal').textContent = rs.length;
 
@@ -742,7 +796,11 @@ function render() {
   document.getElementById('tDays').textContent = uniq(rs.map(function (r) { return r.date; })).length;
 
   var host = document.getElementById('hist');
-  if (!rs.length) { host.innerHTML = '<div class="empty">まだ記録がありません。1本目を記録してみましょう。</div>'; return; }
+  if (!rs.length) {
+    host.innerHTML = '<div class="empty">まだ記録がありません。1本目を記録してみましょう。<br><br>'
+      + '前に記録したものが見当たらない場合は、<br>「記録する」の画面にある案内を読んでください。</div>';
+    return;
+  }
 
   var fu = val('fltUniv'), fs = val('fltSub');
   var view = rs.filter(function (r) {
