@@ -95,9 +95,20 @@
   .item .pct{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:62px}
   .item .d{font-size:12px;color:var(--sub);flex:1}
   .item .note{width:100%;font-size:13px;padding-left:11px;color:#333;white-space:pre-wrap}
-  .item .del{
-    font:inherit;font-size:11px;padding:3px 9px;background:#fff;color:var(--sub);
-    border:1px solid var(--line);border-radius:99px;cursor:pointer
+  .item .acts{display:flex;flex-direction:column;gap:5px;flex:0 0 auto;align-self:flex-start}
+  .item .acts button{
+    font:inherit;font-size:11px;padding:4px 11px;background:#fff;color:var(--sub);
+    border:1px solid var(--line);border-radius:99px;cursor:pointer;white-space:nowrap
+  }
+  .item .acts button:active{background:var(--fill)}
+  .item .acts .del{color:var(--red);border-color:#F0D2D4}
+
+  .editbar{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;
+    background:#FDF3F3;border-left:4px solid var(--red);font-size:13px}
+  .editbar span{flex:1;font-weight:700;color:var(--red)}
+  .editbar button{
+    font:inherit;font-size:12px;padding:5px 13px;background:#fff;color:var(--sub);
+    border:1px solid var(--line);border-radius:99px;cursor:pointer;white-space:nowrap
   }
   .empty{padding:38px 0;text-align:center;color:var(--sub);font-size:14px}
 
@@ -115,6 +126,13 @@
   .sec h3{margin:0 0 4px;font-size:15px}
   .sec p{margin:0;font-size:13px;color:var(--sub);line-height:1.75}
   #bkText{font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;min-height:90px}
+  #rpText{font-size:12.5px;line-height:1.75;min-height:220px}
+  .purpose{margin:4px 0 10px;padding:8px 12px;border-radius:5px;
+    font-size:12.5px;font-weight:700;line-height:1.6}
+  .purpose.send{background:#FDF3F3;color:var(--red)}
+  .purpose.keep{background:#F1F7F1;color:#2E7D32}
+  .mixup{margin-top:12px;font-size:13px;line-height:1.8;color:#333}
+  .mixup b{color:var(--red)}
 
   #kbSpacer{height:0;transition:height .15s ease}
   body.kbopen #kbSpacer{height:46vh}
@@ -141,27 +159,28 @@
 
   <!-- ===== 記録する ===== -->
   <section id="paneA">
+    <div class="editbar hide" id="editBar">
+      <span>記録を編集しています</span>
+      <button type="button" onclick="cancelEdit()">やめる</button>
+    </div>
+
     <label>解いた日</label>
     <input type="date" id="fDate">
 
     <label>大学</label>
     <input type="text" id="fUniv" list="dlUniv" autocomplete="off" placeholder="例）同志社大学" oninput="onUniv()">
     <datalist id="dlUniv"></datalist>
-    <div class="chips" id="favChips"></div>
+    <div class="chips" id="univChips"></div>
 
     <label>学部 <span>（任意）</span></label>
     <input type="text" id="fFac" list="dlFac" autocomplete="off" placeholder="例）経済学部" oninput="onFac()">
     <datalist id="dlFac"></datalist>
+    <div class="chips" id="facChips"></div>
 
     <label>方式 <span>（任意・空欄でも記録できます）</span></label>
     <input type="text" id="fStyle" list="dlStyle" autocomplete="off" placeholder="例）全学部日程" oninput="calcNth()">
     <datalist id="dlStyle"></datalist>
-    <div class="chips">
-      <button type="button" onclick="pickStyle('全学部')">全学部</button>
-      <button type="button" onclick="pickStyle('学部個別')">学部個別</button>
-      <button type="button" onclick="pickStyle('共通テスト併用')">共通テスト併用</button>
-      <button type="button" onclick="pickStyle('公募')">公募</button>
-    </div>
+    <div class="chips" id="styleChips"></div>
 
     <div class="row">
       <div>
@@ -225,6 +244,20 @@
   <section id="paneC" class="hide">
 
     <div class="sec">
+      <h3>先生に送る</h3>
+      <div class="purpose send">先生に見てもらうためのものです</div>
+      <p>まとめを作ってコピーし、Classroomにそのまま貼り付けてください。</p>
+      <div class="mixup">
+        自分の記録を守るための保存は、下の<b>「バックアップ」</b>です。<br>
+        用途がちがうので、押し間違えないように気をつけてください。
+      </div>
+      <button class="sub-btn" onclick="makeReport()">提出用のまとめを作る</button>
+      <textarea id="rpText" class="hide" readonly></textarea>
+      <button class="sub-btn hide" id="rpCopy" onclick="copyReport()">まとめをコピーする</button>
+      <div class="msg" id="rpMsg"></div>
+    </div>
+
+    <div class="sec">
       <h3>名前</h3>
       <p>画面の上に表示されます。空欄でも使えます。</p>
       <input type="text" id="sName" placeholder="例）田中 太郎" autocomplete="off">
@@ -242,6 +275,7 @@
 
     <div class="sec">
       <h3>バックアップ</h3>
+      <div class="purpose keep">自分の記録を守るためのものです</div>
       <p id="bkInfo"></p>
 
       <div class="warn-line">
@@ -250,9 +284,14 @@
         月に一度は書き出して、メモアプリなどに貼って保管してください。
       </div>
 
+      <div class="mixup">
+        これは<b>先生に送るものではありません。</b><br>
+        提出するときは、上の<b>「先生に送る」</b>を使ってください。
+      </div>
+
       <button class="sub-btn" onclick="exportData()">記録を書き出す</button>
       <textarea id="bkText" class="hide" placeholder="ここに書き出した内容が表示されます"></textarea>
-      <button class="sub-btn hide" id="bkCopy" onclick="copyBackup()">コピーする</button>
+      <button class="sub-btn hide" id="bkCopy" onclick="copyBackup()">バックアップをコピーする</button>
       <button class="sub-btn hide" id="bkDl" onclick="downloadBackup()">ファイルに保存する</button>
 
       <label style="margin-top:22px">書き出した内容を貼り付けて復元</label>
@@ -282,6 +321,7 @@
 var KEY = 'akahon_record_v1';
 var DATA = { name: '', favorites: ['', '', ''], records: [], backupAt: '' };
 var FEEL = '';
+var EDIT_ID = null;
 
 var SUBJECTS = ['英語','数学','国語','物理','化学','生物','日本史','世界史','地理','政治・経済','情報','小論文','総合（全科目）'];
 
@@ -345,7 +385,7 @@ function init() {
   document.getElementById('sFav3').value = DATA.favorites[2] || '';
 
   drawWho();
-  drawFavChips();
+  drawUnivChips();
   refreshUnivList();
   onUniv();
   rebuildFilters();
@@ -360,19 +400,67 @@ function drawWho() {
     : '赤本記録';
 }
 
-function drawFavChips() {
-  var favs = DATA.favorites.filter(function (f) { return f; });
-  document.getElementById('favChips').innerHTML = favs.map(function (f) {
-    return '<button type="button" onclick="pickUniv(\'' + esc(f).replace(/'/g, "\\'") + '\')">' + esc(f) + '</button>';
+var STYLE_BASE = ['全学部', '学部個別', '共通テスト併用', '公募', '前期', '中期', '後期'];
+var CHIP_MAX = 10;
+
+function chipHtml(list, kind) {
+  return list.slice(0, CHIP_MAX).map(function (v) {
+    return '<button type="button" data-kind="' + kind + '" data-val="' + esc(v) + '">' + esc(v) + '</button>';
   }).join('');
 }
 
-/* ============ 入力補助 ============ */
-function pickUniv(name) {
-  document.getElementById('fUniv').value = name;
-  onUniv();
+/** 志望校 → 過去に記録した大学 の順で出す */
+function drawUnivChips() {
+  var fav = DATA.favorites.filter(function (f) { return f; });
+  var past = DATA.records.map(function (r) { return r.univ; });
+  document.getElementById('univChips').innerHTML = chipHtml(uniq(fav.concat(past)), 'univ');
 }
 
+/** いま入力中の大学で使った学部 → それ以外 の順で出す */
+function drawFacChips() {
+  var u = norm(val('fUniv'));
+  var mine = DATA.records.filter(function (x) { return x.univ === u; }).map(function (x) { return x.fac; });
+  var all  = DATA.records.map(function (x) { return x.fac; });
+  document.getElementById('facChips').innerHTML = chipHtml(uniq(mine.concat(all)), 'fac');
+}
+
+/** よくある方式 ＋ 自分が過去に書いた方式 */
+function drawStyleChips() {
+  var u = norm(val('fUniv')), f = norm(val('fFac'));
+  var mine = DATA.records.filter(function (x) { return x.univ === u && (!f || x.fac === f); })
+                         .map(function (x) { return x.style; });
+  var all  = DATA.records.map(function (x) { return x.style; });
+  document.getElementById('styleChips').innerHTML =
+    chipHtml(uniq(mine.concat(STYLE_BASE, all)), 'style');
+}
+
+/* チップは data 属性で値を持たせ、まとめて拾う */
+document.addEventListener('click', function (e) {
+  var b = e.target;
+  if (!b || !b.getAttribute) return;
+  var ed = b.getAttribute('data-edit');
+  if (ed) { editRecord(ed); return; }
+
+  var dl = b.getAttribute('data-del');
+  if (dl) { delRecord(dl); return; }
+
+  var kind = b.getAttribute('data-kind');
+  if (!kind) return;
+  var v = b.getAttribute('data-val') || '';
+
+  if (kind === 'univ') {
+    document.getElementById('fUniv').value = v;
+    onUniv();
+  } else if (kind === 'fac') {
+    var el = document.getElementById('fFac');
+    el.value = (el.value === v) ? '' : v;   // もう一度押すと解除
+    onFac();
+  } else if (kind === 'style') {
+    pickStyle(v);
+  }
+});
+
+/* ============ 入力補助 ============ */
 function pickStyle(name) {
   var el = document.getElementById('fStyle');
   el.value = (el.value === name) ? '' : name;   // もう一度押すと解除
@@ -388,23 +476,26 @@ function refreshUnivList() {
 function onUniv() {
   var u = norm(val('fUniv'));
   var mine = DATA.records.filter(function (x) { return x.univ === u; }).map(function (x) { return x.fac; });
-  var all = DATA.records.map(function (x) { return x.fac; });
+  var all  = DATA.records.map(function (x) { return x.fac; });
   setList('dlFac', uniq(mine.concat(all)));
+  drawFacChips();
   onFac();
 }
 
 function onFac() {
   var u = norm(val('fUniv')), f = norm(val('fFac'));
   var mine = DATA.records.filter(function (x) { return x.univ === u && (!f || x.fac === f); }).map(function (x) { return x.style; });
-  var all = DATA.records.map(function (x) { return x.style; });
-  setList('dlStyle', uniq(mine.concat(all, ['全学部', '学部個別', '共通テスト併用', '公募', '前期', '後期', '中期'])));
+  var all  = DATA.records.map(function (x) { return x.style; });
+  setList('dlStyle', uniq(mine.concat(STYLE_BASE, all)));
+  drawStyleChips();
   calcNth();
 }
 
 function calcNth() {
   var u = norm(val('fUniv')), f = norm(val('fFac')), s = norm(val('fStyle'));
   var n = DATA.records.filter(function (r) {
-    return r.univ === u && r.fac === f && r.style === s
+    return r.id !== EDIT_ID
+        && r.univ === u && r.fac === f && r.style === s
         && r.year === val('fYear') && r.subject === val('fSubject');
   }).length + 1;
   document.getElementById('nth').innerHTML = 'この組み合わせは <b>' + n + '回目</b> です';
@@ -441,11 +532,27 @@ function save() {
   document.getElementById('fFac').value = p.fac;
   document.getElementById('fStyle').value = p.style;
 
-  p.id = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
   p.inTime = (p.minutes !== null && p.limit !== null) ? (p.minutes <= p.limit ? '○' : '×') : '';
 
-  DATA.records.push(p);
-  if (!store()) { DATA.records.pop(); return; }
+  var updating = !!EDIT_ID;
+
+  if (updating) {
+    var idx = -1;
+    for (var i = 0; i < DATA.records.length; i++) {
+      if (DATA.records[i].id === EDIT_ID) { idx = i; break; }
+    }
+    if (idx < 0) { flash('ng', '編集していた記録が見つかりませんでした。'); cancelEdit(); return; }
+    p.id = EDIT_ID;
+    var backup = DATA.records[idx];
+    DATA.records[idx] = p;
+    if (!store()) { DATA.records[idx] = backup; return; }
+    EDIT_ID = null;
+    setEditMode(false);
+  } else {
+    p.id = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+    DATA.records.push(p);
+    if (!store()) { DATA.records.pop(); return; }
+  }
 
   ['fMin','fLim','fCorrect','fScore','fNote'].forEach(function (id) {
     document.getElementById(id).value = '';
@@ -453,19 +560,98 @@ function save() {
   autosize(document.getElementById('fNote'));
   FEEL = ''; clearFeel();
 
-  refreshUnivList(); onUniv();
+  refreshUnivList(); drawUnivChips(); onUniv();
   rebuildFilters();
   render();
   drawBackupInfo();
-  flash('ok', '記録しました。おつかれさま。');
-  window.scrollTo(0, 0);
+
+  if (updating) {
+    show('b');                      // 直した記録をその場で確認できるよう一覧へ
+  } else {
+    flash('ok', '記録しました。おつかれさま。');
+    window.scrollTo(0, 0);
+  }
+}
+
+/* ============ 編集 ============ */
+function setEditMode(on) {
+  document.getElementById('editBar').className = on ? 'editbar' : 'editbar hide';
+  document.getElementById('btn').textContent = on ? '更新する' : '記録する';
+}
+
+function editRecord(id) {
+  var hit = DATA.records.filter(function (x) { return x.id === id; });
+  if (!hit.length) return;
+  var r = hit[0];
+
+  EDIT_ID = id;
+
+  document.getElementById('fDate').value    = r.date || '';
+  document.getElementById('fUniv').value    = r.univ || '';
+  document.getElementById('fFac').value     = r.fac || '';
+  document.getElementById('fStyle').value   = r.style || '';
+  document.getElementById('fLim').value     = (r.limit === null || r.limit === undefined) ? '' : r.limit;
+  document.getElementById('fMin').value     = (r.minutes === null || r.minutes === undefined) ? '' : r.minutes;
+  document.getElementById('fScore').value   = (r.score === null || r.score === undefined) ? '' : r.score;
+  document.getElementById('fCorrect').value = (r.correct === null || r.correct === undefined) ? '' : r.correct;
+  document.getElementById('fNote').value    = r.note || '';
+
+  setSelect('fYear', r.year);
+  setSelect('fSubject', r.subject);
+
+  FEEL = r.feel || '';
+  clearFeel();
+  if (FEEL) {
+    var bs = document.querySelectorAll('.feel button');
+    for (var i = 0; i < bs.length; i++) {
+      if (bs[i].textContent === FEEL) bs[i].className = 'on';
+    }
+  }
+
+  onUniv();
+  autosize(document.getElementById('fNote'));
+  setEditMode(true);
+  show('a');
+}
+
+function cancelEdit() {
+  EDIT_ID = null;
+  setEditMode(false);
+  resetForm();
+}
+
+function resetForm() {
+  document.getElementById('fDate').value = fmt(new Date());
+  ['fUniv','fFac','fStyle','fLim','fMin','fScore','fCorrect','fNote'].forEach(function (id) {
+    document.getElementById(id).value = '';
+  });
+  FEEL = ''; clearFeel();
+  autosize(document.getElementById('fNote'));
+  onUniv();
+}
+
+function setSelect(id, v) {
+  var el = document.getElementById(id);
+  v = String(v === null || v === undefined ? '' : v);
+  if (!v) return;
+  var found = false;
+  for (var i = 0; i < el.options.length; i++) {
+    if (el.options[i].value === v) { found = true; break; }
+  }
+  if (!found) {
+    var o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    el.appendChild(o);
+  }
+  el.value = v;
 }
 
 function delRecord(id) {
   if (!window.confirm('この記録を削除します。元に戻せません。よろしいですか。')) return;
   DATA.records = DATA.records.filter(function (r) { return r.id !== id; });
   store();
-  refreshUnivList(); onUniv();
+  if (EDIT_ID === id) { EDIT_ID = null; setEditMode(false); resetForm(); }
+  refreshUnivList(); drawUnivChips(); onUniv();
   rebuildFilters();
   render();
   drawBackupInfo();
@@ -594,7 +780,10 @@ function render() {
             + esc(r.date) + (r.minutes !== null ? ' ・ ' + r.minutes + '分' : '') + (r.inTime ? ' ' + r.inTime : '')
             + (r.score !== null ? ' ・ ' + r.score + '点' : '') + (r.feel ? ' ・ ' + esc(r.feel) : '')
             + '</div>'
-            + '<button class="del" onclick="delRecord(\'' + esc(r.id) + '\')">削除</button>'
+            + '<div class="acts">'
+            +   '<button data-edit="' + esc(r.id) + '">編集</button>'
+            +   '<button class="del" data-del="' + esc(r.id) + '">削除</button>'
+            + '</div>'
             + (r.note ? '<div class="note">' + esc(r.note) + '</div>' : '')
             + '</div>';
     });
@@ -614,9 +803,101 @@ function saveName() {
 function saveFav() {
   DATA.favorites = [norm(val('sFav1')), norm(val('sFav2')), norm(val('sFav3'))];
   if (!store()) return;
-  drawFavChips();
+  drawUnivChips();
   refreshUnivList();
   bkFlash('ok', '保存しました。');
+}
+
+/* ============ 先生に送るまとめ ============ */
+function reportText() {
+  var rs = withNth(DATA.records).slice();
+  rs.sort(function (a, b) {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.id < b.id ? -1 : 1;     // 同じ日は入力した順
+  });
+
+  var L = [];
+  L.push('【赤本記録】' + (DATA.name || '（名前未設定）'));
+  L.push(fmt(new Date()) + ' 時点');
+  L.push('');
+
+  if (!rs.length) {
+    L.push('まだ記録がありません。');
+    return L.join('\n');
+  }
+
+  var days = uniq(rs.map(function (r) { return r.date; })).length;
+  L.push('全 ' + rs.length + '本 ／ 記録した日数 ' + days + '日');
+  L.push(rs[0].date + ' 〜 ' + rs[rs.length - 1].date);
+  L.push('');
+
+  // 大学・科目別のまとめ
+  L.push('■ 大学・科目別');
+  var g = {};
+  rs.forEach(function (r) {
+    var k = r.univ + (r.fac ? ' ' + r.fac : '') + '／' + r.subject;
+    (g[k] = g[k] || []).push(r);
+  });
+  Object.keys(g).forEach(function (k) {
+    var list = g[k];
+    var w = list.filter(function (r) { return r.correct !== null; });
+    var avg = w.length ? Math.round(w.reduce(function (s, r) { return s + r.correct; }, 0) / w.length) : null;
+    L.push('・' + k + '　' + list.length + '本' + (avg === null ? '' : '　平均 ' + avg + '%'));
+  });
+  L.push('');
+
+  // すべての記録
+  L.push('■ すべての記録（古い順）');
+  rs.forEach(function (r) {
+    var head = r.date + ' '
+             + r.univ + (r.fac ? ' ' + r.fac : '') + '／' + r.subject + ' '
+             + r.year + '年度' + (r.style ? ' ' + r.style : '') + ' '
+             + r.nth + '回目';
+
+    var t = [];
+    t.push(r.correct === null ? '正答率—' : r.correct + '%');
+    if (r.minutes !== null && r.minutes !== undefined) {
+      t.push(r.minutes + '分'
+           + ((r.limit !== null && r.limit !== undefined) ? '／制限' + r.limit + '分' : '')
+           + (r.inTime ? ' ' + r.inTime : ''));
+    }
+    if (r.score !== null && r.score !== undefined) t.push(r.score + '点');
+    if (r.feel) t.push(r.feel);
+
+    L.push(head + '　｜　' + t.join('　｜　'));
+    if (r.note) L.push('　→ ' + String(r.note).replace(/\s*\n\s*/g, ' '));
+  });
+
+  return L.join('\n');
+}
+
+function makeReport() {
+  if (!DATA.records.length) { rpFlash('ng', 'まだ記録がありません。'); return; }
+
+  var t = document.getElementById('rpText');
+  t.value = reportText();
+  t.className = '';
+  document.getElementById('rpCopy').className = 'sub-btn';
+  rpFlash('ok', 'まとめを作りました。コピーしてClassroomに貼り付けてください。');
+}
+
+function copyReport() {
+  var t = document.getElementById('rpText');
+  var done = function () { rpFlash('ok', 'コピーしました。Classroomに貼り付けてください。'); };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t.value).then(done, fallback);
+  } else {
+    fallback();
+  }
+
+  function fallback() {
+    t.readOnly = false;
+    t.select();
+    try { document.execCommand('copy'); done(); }
+    catch (e) { rpFlash('ng', '自動でコピーできませんでした。手で選択してコピーしてください。'); }
+    t.readOnly = true;
+  }
 }
 
 function drawBackupInfo() {
@@ -709,6 +990,7 @@ function importData() {
   if (!store()) return;
 
   document.getElementById('rsText').value = '';
+  EDIT_ID = null; setEditMode(false);
   init();
   bkFlash('ok', '復元しました。記録 ' + DATA.records.length + '件。');
 }
@@ -720,6 +1002,7 @@ function clearAll() {
 
   DATA = { name: '', favorites: ['', '', ''], records: [], backupAt: '' };
   try { localStorage.removeItem(KEY); } catch (e) {}
+  EDIT_ID = null; setEditMode(false);
   init();
   bkFlash('ok', 'すべて削除しました。');
 }
@@ -772,6 +1055,11 @@ function flash(k, t) {
   var m = document.getElementById('msg');
   m.className = 'msg ' + k; m.textContent = t;
   setTimeout(function () { m.className = 'msg'; }, 6000);
+}
+function rpFlash(k, t) {
+  var m = document.getElementById('rpMsg');
+  m.className = 'msg ' + k; m.textContent = t;
+  setTimeout(function () { m.className = 'msg'; }, 8000);
 }
 function bkFlash(k, t) {
   var m = document.getElementById('bkMsg');
