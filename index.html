@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>赤本記録</title>
+<style>
+  :root{
+    --red:#C1121F;
+    --red-dark:#8B0A14;
+    --ink:#000;
+    --sub:#6B6B6B;
+    --line:#E4E1DC;
+    --fill:#F7F5F2;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;background:#fff;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+    font-size:16px;line-height:1.6;
+    font-feature-settings:"palt";
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:0 18px 64px}
+  html,body{overflow-x:hidden}
+  #fDate{width:100%;max-width:200px}
+
+  header{border-top:6px solid var(--red);padding:18px 0 14px;margin-bottom:6px}
+  .who{font-size:14px;color:var(--sub);letter-spacing:.02em}
+  .who b{color:var(--ink);font-size:19px;font-weight:700}
+  .tally{display:flex;gap:22px;margin-top:12px}
+  .tally div{line-height:1.15}
+  .tally .n{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+  .tally .k{font-size:12px;color:var(--sub)}
+
+  nav{display:flex;border-bottom:1px solid var(--line);margin-bottom:22px}
+  nav button{
+    flex:1;background:none;border:0;padding:13px 0;font:inherit;font-weight:700;
+    color:var(--sub);border-bottom:3px solid transparent;cursor:pointer
+  }
+  nav button.on{color:var(--red);border-bottom-color:var(--red)}
+
+  label{display:block;font-size:13px;font-weight:700;margin:18px 0 6px}
+  label span{color:var(--sub);font-weight:400}
+  input,select,textarea{
+    width:100%;padding:11px 12px;font:inherit;background:#fff;
+    border:1px solid var(--line);border-radius:6px;color:var(--ink)
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--red);outline-offset:1px;border-color:var(--red)}
+  textarea{min-height:78px;resize:vertical;overflow-y:hidden}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1;min-width:0}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+  .chips button{
+    padding:6px 11px;font:inherit;font-size:13px;background:var(--fill);
+    border:1px solid var(--line);border-radius:99px;cursor:pointer;color:#333
+  }
+  .chips button:active{background:#FDF3F3;border-color:var(--red);color:var(--red)}
+
+  .feel{display:flex;gap:8px}
+  .feel button{
+    flex:1;padding:10px 4px;font:inherit;font-size:14px;background:#fff;
+    border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--sub)
+  }
+  .feel button.on{border-color:var(--red);background:#FDF3F3;color:var(--red);font-weight:700}
+
+  .nth{margin-top:14px;padding:10px 12px;background:var(--fill);border-left:4px solid var(--red);font-size:14px}
+  .nth b{font-size:17px}
+
+  .send{
+    width:100%;margin-top:26px;padding:15px;font:inherit;font-weight:700;font-size:17px;
+    background:var(--red);color:#fff;border:0;border-radius:6px;cursor:pointer
+  }
+  .send:active{background:var(--red-dark)}
+  .send:disabled{background:#C9C6C1}
+  .sub-btn{
+    width:100%;margin-top:10px;padding:12px;font:inherit;font-weight:700;font-size:15px;
+    background:#fff;color:#333;border:1px solid var(--line);border-radius:6px;cursor:pointer
+  }
+  .sub-btn:active{background:var(--fill)}
+  .danger{color:var(--red);border-color:#F0D2D4}
+
+  .msg{margin-top:14px;padding:12px;border-radius:6px;font-size:14px;display:none}
+  .msg.ok{display:block;background:#F1F7F1;border-left:4px solid #2E7D32}
+  .msg.ng{display:block;background:#FDF3F3;border-left:4px solid var(--red)}
+
+  .grp{margin-bottom:26px}
+  .chart{display:block;width:100%;height:auto;margin:2px 0 10px}
+  .filter{display:flex;gap:8px;margin-bottom:8px}
+  .filter select{flex:1;min-width:0;padding:9px 10px;font-size:14px}
+  .hitcount{font-size:12px;color:var(--sub);margin-bottom:16px}
+  .grp h3{margin:0 0 2px;font-size:16px}
+  .grp .meta{font-size:12px;color:var(--sub);margin-bottom:9px}
+  .item{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:9px 0 9px 11px;border-left:3px solid var(--red);border-bottom:1px solid var(--line)}
+  .item .pct{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:62px}
+  .item .d{font-size:12px;color:var(--sub);flex:1}
+  .item .note{width:100%;font-size:13px;padding-left:11px;color:#333;white-space:pre-wrap}
+  .item .del{
+    font:inherit;font-size:11px;padding:3px 9px;background:#fff;color:var(--sub);
+    border:1px solid var(--line);border-radius:99px;cursor:pointer
+  }
+  .empty{padding:38px 0;text-align:center;color:var(--sub);font-size:14px}
+
+  .note-box{
+    margin-top:14px;padding:12px 14px;background:var(--fill);border-radius:6px;
+    font-size:13px;line-height:1.8;color:#333
+  }
+  .note-box b{color:var(--red)}
+  .warn-line{
+    margin-top:16px;padding:10px 12px;background:#FDF3F3;border-left:4px solid var(--red);
+    font-size:13px;line-height:1.75
+  }
+  .sec{margin-top:30px;padding-top:22px;border-top:1px solid var(--line)}
+  .sec:first-of-type{margin-top:4px;padding-top:0;border-top:0}
+  .sec h3{margin:0 0 4px;font-size:15px}
+  .sec p{margin:0;font-size:13px;color:var(--sub);line-height:1.75}
+  #bkText{font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;min-height:90px}
+
+  #kbSpacer{height:0;transition:height .15s ease}
+  body.kbopen #kbSpacer{height:46vh}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="who" id="who">赤本記録</div>
+    <div class="tally">
+      <div><div class="n" id="tTotal">0</div><div class="k">これまでの本数</div></div>
+      <div><div class="n" id="tWeek">0</div><div class="k">今週</div></div>
+      <div><div class="n" id="tDays">0</div><div class="k">記録した日数</div></div>
+    </div>
+  </header>
+
+  <nav>
+    <button id="tabA" class="on" onclick="show('a')">記録する</button>
+    <button id="tabB" onclick="show('b')">これまでの記録</button>
+    <button id="tabC" onclick="show('c')">設定</button>
+  </nav>
+
+  <!-- ===== 記録する ===== -->
+  <section id="paneA">
+    <label>解いた日</label>
+    <input type="date" id="fDate">
+
+    <label>大学</label>
+    <input type="text" id="fUniv" list="dlUniv" autocomplete="off" placeholder="例）同志社大学" oninput="onUniv()">
+    <datalist id="dlUniv"></datalist>
+    <div class="chips" id="favChips"></div>
+
+    <label>学部 <span>（任意）</span></label>
+    <input type="text" id="fFac" list="dlFac" autocomplete="off" placeholder="例）経済学部" oninput="onFac()">
+    <datalist id="dlFac"></datalist>
+
+    <label>方式 <span>（任意・空欄でも記録できます）</span></label>
+    <input type="text" id="fStyle" list="dlStyle" autocomplete="off" placeholder="例）全学部日程" oninput="calcNth()">
+    <datalist id="dlStyle"></datalist>
+    <div class="chips">
+      <button type="button" onclick="pickStyle('全学部')">全学部</button>
+      <button type="button" onclick="pickStyle('学部個別')">学部個別</button>
+      <button type="button" onclick="pickStyle('共通テスト併用')">共通テスト併用</button>
+      <button type="button" onclick="pickStyle('公募')">公募</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>年度</label>
+        <select id="fYear" onchange="calcNth()"></select>
+      </div>
+      <div>
+        <label>科目</label>
+        <select id="fSubject" onchange="calcNth()"></select>
+      </div>
+    </div>
+
+    <div class="nth" id="nth">この組み合わせは <b>1回目</b> です</div>
+
+    <div class="row">
+      <div>
+        <label>制限時間 <span>（分・任意）</span></label>
+        <input type="number" id="fLim" inputmode="numeric" min="0" max="600">
+      </div>
+      <div>
+        <label>かかった時間 <span>（分）</span></label>
+        <input type="number" id="fMin" inputmode="numeric" min="0" max="600">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>得点 <span>（点・任意）</span></label>
+        <input type="number" id="fScore" inputmode="decimal" min="0" max="1000">
+      </div>
+      <div>
+        <label>正解率 <span>（%）</span></label>
+        <input type="number" id="fCorrect" inputmode="decimal" min="0" max="100">
+      </div>
+    </div>
+
+    <label>手応え</label>
+    <div class="feel">
+      <button type="button" onclick="setFeel(this,'よかった')">よかった</button>
+      <button type="button" onclick="setFeel(this,'ふつう')">ふつう</button>
+      <button type="button" onclick="setFeel(this,'くやしい')">くやしい</button>
+    </div>
+
+    <label>ひとこと <span>（うれしかった点や反省点）</span></label>
+    <textarea id="fNote" placeholder="例）大問3の空所補充で時間を使いすぎた。次は10分で切り上げる。"></textarea>
+
+    <button class="send" id="btn" onclick="save()">記録する</button>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <!-- ===== これまでの記録 ===== -->
+  <section id="paneB" class="hide">
+    <div class="filter">
+      <select id="fltUniv" onchange="render()"></select>
+      <select id="fltSub" onchange="render()"></select>
+    </div>
+    <div id="hist"><div class="empty">まだ記録がありません。</div></div>
+  </section>
+
+  <!-- ===== 設定 ===== -->
+  <section id="paneC" class="hide">
+
+    <div class="sec">
+      <h3>名前</h3>
+      <p>画面の上に表示されます。空欄でも使えます。</p>
+      <input type="text" id="sName" placeholder="例）田中 太郎" autocomplete="off">
+      <button class="sub-btn" onclick="saveName()">保存する</button>
+    </div>
+
+    <div class="sec">
+      <h3>よく使う大学</h3>
+      <p>記録画面でワンタップで入力できるようになります。</p>
+      <input type="text" id="sFav1" placeholder="志望校1" autocomplete="off">
+      <input type="text" id="sFav2" placeholder="志望校2" autocomplete="off" style="margin-top:8px">
+      <input type="text" id="sFav3" placeholder="志望校3" autocomplete="off" style="margin-top:8px">
+      <button class="sub-btn" onclick="saveFav()">保存する</button>
+    </div>
+
+    <div class="sec">
+      <h3>バックアップ</h3>
+      <p id="bkInfo"></p>
+
+      <div class="warn-line">
+        記録は<b>この端末の中だけ</b>に保存されています。<br>
+        ブラウザのデータを消したり、機種変更をすると<b>記録も消えます</b>。<br>
+        月に一度は書き出して、メモアプリなどに貼って保管してください。
+      </div>
+
+      <button class="sub-btn" onclick="exportData()">記録を書き出す</button>
+      <textarea id="bkText" class="hide" placeholder="ここに書き出した内容が表示されます"></textarea>
+      <button class="sub-btn hide" id="bkCopy" onclick="copyBackup()">コピーする</button>
+      <button class="sub-btn hide" id="bkDl" onclick="downloadBackup()">ファイルに保存する</button>
+
+      <label style="margin-top:22px">書き出した内容を貼り付けて復元</label>
+      <textarea id="rsText" placeholder="バックアップした文字列をここに貼り付けてください"></textarea>
+      <button class="sub-btn" onclick="importData()">復元する</button>
+      <div class="msg" id="bkMsg"></div>
+    </div>
+
+    <div class="sec">
+      <h3>すべて削除</h3>
+      <p>この端末に保存された記録をすべて消します。元に戻せません。</p>
+      <button class="sub-btn danger" onclick="clearAll()">すべて削除する</button>
+    </div>
+
+    <div class="note-box">
+      このページは、入力した記録を<b>あなたの端末の中だけ</b>に保存します。<br>
+      どこにも送信されず、校舎の先生も含めて、他の誰も見ることはできません。
+    </div>
+
+  </section>
+
+  <div id="kbSpacer"></div>
+
+</div>
+
+<script>
+var KEY = 'akahon_record_v1';
+var DATA = { name: '', favorites: ['', '', ''], records: [], backupAt: '' };
+var FEEL = '';
+
+var SUBJECTS = ['英語','数学','国語','物理','化学','生物','日本史','世界史','地理','政治・経済','情報','小論文','総合（全科目）'];
+
+var UNIV_LIST = [
+  '京都大学','大阪大学','神戸大学','滋賀大学','滋賀県立大学','滋賀医科大学',
+  '京都工芸繊維大学','京都府立大学','京都教育大学','大阪公立大学','大阪教育大学',
+  '奈良女子大学','奈良教育大学','和歌山大学','兵庫県立大学','三重大学','岐阜大学',
+  '名古屋大学','岡山大学','広島大学','筑波大学','東京大学','一橋大学','北海道大学',
+  '東北大学','九州大学','金沢大学','信州大学',
+  '同志社大学','立命館大学','関西大学','関西学院大学',
+  '京都産業大学','近畿大学','甲南大学','龍谷大学',
+  '摂南大学','神戸学院大学','追手門学院大学','桃山学院大学',
+  '佛教大学','京都女子大学','同志社女子大学','京都橘大学','大谷大学','花園大学',
+  '大阪工業大学','関西外国語大学','京都外国語大学','武庫川女子大学','甲南女子大学',
+  '早稲田大学','慶應義塾大学','上智大学','東京理科大学','明治大学','青山学院大学',
+  '立教大学','中央大学','法政大学','学習院大学','南山大学','名城大学'
+];
+
+/* ============ 保存と読み込み ============ */
+function load() {
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var d = JSON.parse(raw);
+      DATA.name = String(d.name || '');
+      DATA.favorites = Array.isArray(d.favorites) ? d.favorites.slice(0, 3) : ['', '', ''];
+      while (DATA.favorites.length < 3) DATA.favorites.push('');
+      DATA.records = Array.isArray(d.records) ? d.records : [];
+      DATA.backupAt = String(d.backupAt || '');
+    }
+  } catch (e) { /* 読めなければ初期状態のまま */ }
+}
+
+function store() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(DATA));
+    return true;
+  } catch (e) {
+    flash('ng', '保存できませんでした。ブラウザの設定で保存が許可されているか確認してください。');
+    return false;
+  }
+}
+
+/* ============ 起動 ============ */
+window.addEventListener('load', function () {
+  load();
+  init();
+});
+
+function init() {
+  var today = fmt(new Date());
+  document.getElementById('fDate').value = today;
+
+  var y = Number(today.slice(0, 4));
+  fill('fYear', range(y, y - 11).map(String));
+  fill('fSubject', SUBJECTS);
+
+  document.getElementById('sName').value = DATA.name;
+  document.getElementById('sFav1').value = DATA.favorites[0] || '';
+  document.getElementById('sFav2').value = DATA.favorites[1] || '';
+  document.getElementById('sFav3').value = DATA.favorites[2] || '';
+
+  drawWho();
+  drawFavChips();
+  refreshUnivList();
+  onUniv();
+  rebuildFilters();
+  render();
+  drawBackupInfo();
+}
+
+function drawWho() {
+  var el = document.getElementById('who');
+  el.innerHTML = DATA.name
+    ? '<b>' + esc(DATA.name) + '</b> さんの赤本記録'
+    : '赤本記録';
+}
+
+function drawFavChips() {
+  var favs = DATA.favorites.filter(function (f) { return f; });
+  document.getElementById('favChips').innerHTML = favs.map(function (f) {
+    return '<button type="button" onclick="pickUniv(\'' + esc(f).replace(/'/g, "\\'") + '\')">' + esc(f) + '</button>';
+  }).join('');
+}
+
+/* ============ 入力補助 ============ */
+function pickUniv(name) {
+  document.getElementById('fUniv').value = name;
+  onUniv();
+}
+
+function pickStyle(name) {
+  var el = document.getElementById('fStyle');
+  el.value = (el.value === name) ? '' : name;   // もう一度押すと解除
+  calcNth();
+}
+
+function refreshUnivList() {
+  var fromRecord = DATA.records.map(function (r) { return r.univ; });
+  var fav = DATA.favorites.filter(function (f) { return f; });
+  setList('dlUniv', uniq(fav.concat(fromRecord, UNIV_LIST)));
+}
+
+function onUniv() {
+  var u = norm(val('fUniv'));
+  var mine = DATA.records.filter(function (x) { return x.univ === u; }).map(function (x) { return x.fac; });
+  var all = DATA.records.map(function (x) { return x.fac; });
+  setList('dlFac', uniq(mine.concat(all)));
+  onFac();
+}
+
+function onFac() {
+  var u = norm(val('fUniv')), f = norm(val('fFac'));
+  var mine = DATA.records.filter(function (x) { return x.univ === u && (!f || x.fac === f); }).map(function (x) { return x.style; });
+  var all = DATA.records.map(function (x) { return x.style; });
+  setList('dlStyle', uniq(mine.concat(all, ['全学部', '学部個別', '共通テスト併用', '公募', '前期', '後期', '中期'])));
+  calcNth();
+}
+
+function calcNth() {
+  var u = norm(val('fUniv')), f = norm(val('fFac')), s = norm(val('fStyle'));
+  var n = DATA.records.filter(function (r) {
+    return r.univ === u && r.fac === f && r.style === s
+        && r.year === val('fYear') && r.subject === val('fSubject');
+  }).length + 1;
+  document.getElementById('nth').innerHTML = 'この組み合わせは <b>' + n + '回目</b> です';
+}
+
+function setFeel(b, v) {
+  FEEL = v;
+  var bs = b.parentNode.getElementsByTagName('button');
+  for (var i = 0; i < bs.length; i++) bs[i].className = '';
+  b.className = 'on';
+}
+
+/* ============ 記録する ============ */
+function save() {
+  var p = {
+    date: val('fDate'),
+    univ: norm(val('fUniv')),
+    fac:  norm(val('fFac')),
+    style: norm(val('fStyle')),
+    year: val('fYear'),
+    subject: val('fSubject'),
+    minutes: num(val('fMin')),
+    limit: num(val('fLim')),
+    correct: num(val('fCorrect')),
+    score: num(val('fScore')),
+    feel: FEEL,
+    note: String(val('fNote') || '').replace(/[ \t]+$/gm, '').trim()
+  };
+
+  if (!p.date || !p.univ || !p.year || !p.subject) { flash('ng', '日付・大学・年度・科目を入力してください。'); return; }
+  if (p.correct === null || p.correct < 0 || p.correct > 100) { flash('ng', '正解率を0〜100で入力してください。'); return; }
+
+  document.getElementById('fUniv').value = p.univ;
+  document.getElementById('fFac').value = p.fac;
+  document.getElementById('fStyle').value = p.style;
+
+  p.id = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+  p.inTime = (p.minutes !== null && p.limit !== null) ? (p.minutes <= p.limit ? '○' : '×') : '';
+
+  DATA.records.push(p);
+  if (!store()) { DATA.records.pop(); return; }
+
+  ['fMin','fLim','fCorrect','fScore','fNote'].forEach(function (id) {
+    document.getElementById(id).value = '';
+  });
+  autosize(document.getElementById('fNote'));
+  FEEL = ''; clearFeel();
+
+  refreshUnivList(); onUniv();
+  rebuildFilters();
+  render();
+  drawBackupInfo();
+  flash('ok', '記録しました。おつかれさま。');
+  window.scrollTo(0, 0);
+}
+
+function delRecord(id) {
+  if (!window.confirm('この記録を削除します。元に戻せません。よろしいですか。')) return;
+  DATA.records = DATA.records.filter(function (r) { return r.id !== id; });
+  store();
+  refreshUnivList(); onUniv();
+  rebuildFilters();
+  render();
+  drawBackupInfo();
+}
+
+/* ============ 一覧 ============ */
+function rebuildFilters() {
+  var u = document.getElementById('fltUniv');
+  var s = document.getElementById('fltSub');
+  var cu = u.value, cs = s.value;
+
+  u.innerHTML = '<option value="">すべての大学</option>'
+    + uniq(DATA.records.map(function (r) { return r.univ; })).sort()
+        .map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+
+  var subs = uniq(DATA.records.map(function (r) { return r.subject; }));
+  subs.sort(function (a, b) { return SUBJECTS.indexOf(a) - SUBJECTS.indexOf(b); });
+  s.innerHTML = '<option value="">すべての科目</option>'
+    + subs.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+
+  u.value = cu; s.value = cs;
+}
+
+/* 正解率の推移グラフ（横軸＝解いた日の順） */
+function chartSvg(list) {
+  var pts = list.filter(function (r) { return r.correct !== null; });
+  if (pts.length < 2) return '';
+
+  var W = 320, H = 130, L = 28, R = 10, T = 10, B = 30;
+  var iw = W - L - R, ih = H - T - B;
+  var xs = [], ys = [];
+  pts.forEach(function (r, i) {
+    xs.push(L + iw * i / (pts.length - 1));
+    ys.push(T + ih * (1 - Math.min(100, Math.max(0, r.correct)) / 100));
+  });
+
+  var grid = '';
+  [0, 50, 100].forEach(function (v) {
+    var y = T + ih * (1 - v / 100);
+    grid += '<line x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R) + '" y2="' + y.toFixed(1)
+          + '" stroke="#E4E1DC" stroke-width="1"/>'
+          + '<text x="' + (L - 6) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="#6B6B6B">' + v + '</text>';
+  });
+
+  var d = xs.map(function (x, i) {
+    return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + ys[i].toFixed(1);
+  }).join(' ');
+
+  var step = pts.length > 6 ? Math.ceil(pts.length / 6) : 1;
+  var dots = '';
+  pts.forEach(function (r, i) {
+    dots += '<circle cx="' + xs[i].toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="3.5" fill="#C1121F"/>';
+    if (i % step === 0 || i === pts.length - 1) {
+      dots += '<text x="' + xs[i].toFixed(1) + '" y="' + (H - 14) + '" text-anchor="middle" font-size="9" fill="#6B6B6B">' + esc(r.year) + '</text>'
+            + '<text x="' + xs[i].toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="8" fill="#9A9A9A">' + esc(r.date.slice(5).replace('-', '/')) + '</text>';
+    }
+  });
+
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">'
+       + grid
+       + '<path d="' + d + '" fill="none" stroke="#C1121F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+       + dots
+       + '</svg>';
+}
+
+/** 同じ組み合わせの中で何回目かを、日付順に数える */
+function withNth(list) {
+  var sorted = list.slice().sort(function (a, b) {
+    return a.date < b.date ? -1 : (a.date > b.date ? 1 : (a.id < b.id ? -1 : 1));
+  });
+  var count = {};
+  sorted.forEach(function (r) {
+    var k = r.univ + '|' + r.fac + '|' + r.style + '|' + r.year + '|' + r.subject;
+    count[k] = (count[k] || 0) + 1;
+    r.nth = count[k];
+  });
+  return list;
+}
+
+function render() {
+  var rs = withNth(DATA.records);
+  document.getElementById('tTotal').textContent = rs.length;
+
+  var now = new Date(), monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  var ms = fmt(monday);
+  document.getElementById('tWeek').textContent = rs.filter(function (r) { return r.date >= ms; }).length;
+  document.getElementById('tDays').textContent = uniq(rs.map(function (r) { return r.date; })).length;
+
+  var host = document.getElementById('hist');
+  if (!rs.length) { host.innerHTML = '<div class="empty">まだ記録がありません。1本目を記録してみましょう。</div>'; return; }
+
+  var fu = val('fltUniv'), fs = val('fltSub');
+  var view = rs.filter(function (r) {
+    return (!fu || r.univ === fu) && (!fs || r.subject === fs);
+  });
+  if (!view.length) {
+    host.innerHTML = '<div class="empty">条件に合う記録がありません。</div>';
+    return;
+  }
+
+  var groups = {};
+  view.forEach(function (r) {
+    var k = r.univ + (r.fac ? ' ' + r.fac : '') + '／' + r.subject;
+    (groups[k] = groups[k] || []).push(r);
+  });
+
+  var html = '<div class="hitcount">' + view.length + '件を表示中'
+           + ((fu || fs) ? '（全' + rs.length + '件中）' : '') + '</div>';
+  Object.keys(groups).forEach(function (k) {
+    var g = groups[k].slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    var withPct = g.filter(function (r) { return r.correct !== null; });
+    var avg = withPct.length
+      ? Math.round(withPct.reduce(function (s, r) { return s + r.correct; }, 0) / withPct.length)
+      : null;
+
+    html += '<div class="grp"><h3>' + esc(k) + '</h3>'
+          + '<div class="meta">' + g.length + '本'
+          + (avg === null ? '' : '／平均 正解率 ' + avg + '%') + '</div>'
+          + chartSvg(g.slice().reverse());
+
+    g.forEach(function (r) {
+      html += '<div class="item">'
+            + '<div class="pct">' + (r.correct === null ? '—' : r.correct + '%') + '</div>'
+            + '<div class="d">' + esc(r.year) + '年度' + (r.style ? ' ' + esc(r.style) : '') + ' ・ ' + r.nth + '回目<br>'
+            + esc(r.date) + (r.minutes !== null ? ' ・ ' + r.minutes + '分' : '') + (r.inTime ? ' ' + r.inTime : '')
+            + (r.score !== null ? ' ・ ' + r.score + '点' : '') + (r.feel ? ' ・ ' + esc(r.feel) : '')
+            + '</div>'
+            + '<button class="del" onclick="delRecord(\'' + esc(r.id) + '\')">削除</button>'
+            + (r.note ? '<div class="note">' + esc(r.note) + '</div>' : '')
+            + '</div>';
+    });
+    html += '</div>';
+  });
+  host.innerHTML = html;
+}
+
+/* ============ 設定 ============ */
+function saveName() {
+  DATA.name = norm(val('sName'));
+  if (!store()) return;
+  drawWho();
+  bkFlash('ok', '保存しました。');
+}
+
+function saveFav() {
+  DATA.favorites = [norm(val('sFav1')), norm(val('sFav2')), norm(val('sFav3'))];
+  if (!store()) return;
+  drawFavChips();
+  refreshUnivList();
+  bkFlash('ok', '保存しました。');
+}
+
+function drawBackupInfo() {
+  var el = document.getElementById('bkInfo');
+  if (!DATA.records.length) { el.textContent = 'まだ記録がありません。'; return; }
+  el.textContent = DATA.backupAt
+    ? '記録 ' + DATA.records.length + '件　最後に書き出したのは ' + DATA.backupAt + ' です。'
+    : '記録 ' + DATA.records.length + '件　まだ一度も書き出していません。';
+}
+
+function backupText() {
+  return JSON.stringify({
+    v: 1,
+    name: DATA.name,
+    favorites: DATA.favorites,
+    records: DATA.records
+  });
+}
+
+function exportData() {
+  if (!DATA.records.length) { bkFlash('ng', '書き出す記録がありません。'); return; }
+
+  var t = document.getElementById('bkText');
+  t.value = backupText();
+  t.className = '';
+  document.getElementById('bkCopy').className = 'sub-btn';
+  document.getElementById('bkDl').className = 'sub-btn';
+
+  DATA.backupAt = fmt(new Date());
+  store();
+  drawBackupInfo();
+  bkFlash('ok', '書き出しました。コピーするか、ファイルに保存してください。');
+}
+
+function copyBackup() {
+  var t = document.getElementById('bkText');
+  var done = function () { bkFlash('ok', 'コピーしました。メモアプリなどに貼って保管してください。'); };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t.value).then(done, fallback);
+  } else {
+    fallback();
+  }
+
+  function fallback() {
+    t.select();
+    try { document.execCommand('copy'); done(); }
+    catch (e) { bkFlash('ng', '自動でコピーできませんでした。手で選択してコピーしてください。'); }
+  }
+}
+
+function downloadBackup() {
+  try {
+    var blob = new Blob([backupText()], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '赤本記録_' + fmt(new Date()) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    bkFlash('ok', 'ファイルに保存しました。');
+  } catch (e) {
+    bkFlash('ng', 'この端末ではファイル保存ができませんでした。コピーを使ってください。');
+  }
+}
+
+function importData() {
+  var raw = String(val('rsText') || '').trim();
+  if (!raw) { bkFlash('ng', '復元する内容を貼り付けてください。'); return; }
+
+  var d;
+  try { d = JSON.parse(raw); }
+  catch (e) { bkFlash('ng', '内容を読み取れませんでした。書き出した文字列をそのまま貼り付けてください。'); return; }
+
+  if (!d || !Array.isArray(d.records)) { bkFlash('ng', '赤本記録のバックアップではないようです。'); return; }
+
+  if (DATA.records.length &&
+      !window.confirm('いまの記録（' + DATA.records.length + '件）を、貼り付けた内容（' + d.records.length + '件）で置き換えます。よろしいですか。')) {
+    return;
+  }
+
+  DATA.name = String(d.name || '');
+  DATA.favorites = Array.isArray(d.favorites) ? d.favorites.slice(0, 3) : ['', '', ''];
+  while (DATA.favorites.length < 3) DATA.favorites.push('');
+  DATA.records = d.records.map(function (r) {
+    if (!r.id) r.id = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+    return r;
+  });
+  if (!store()) return;
+
+  document.getElementById('rsText').value = '';
+  init();
+  bkFlash('ok', '復元しました。記録 ' + DATA.records.length + '件。');
+}
+
+function clearAll() {
+  if (!DATA.records.length) { bkFlash('ng', '削除する記録がありません。'); return; }
+  if (!window.confirm('この端末の記録をすべて削除します。元に戻せません。よろしいですか。')) return;
+  if (!window.confirm('本当に削除しますか。書き出していない記録は二度と戻せません。')) return;
+
+  DATA = { name: '', favorites: ['', '', ''], records: [], backupAt: '' };
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  init();
+  bkFlash('ok', 'すべて削除しました。');
+}
+
+/* ============ 共通 ============ */
+function norm(s) {
+  return String(s || '')
+    .replace(/　/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function show(w) {
+  ['a','b','c'].forEach(function (k) {
+    document.getElementById('pane' + k.toUpperCase()).className = (w === k) ? '' : 'hide';
+    document.getElementById('tab' + k.toUpperCase()).className = (w === k) ? 'on' : '';
+  });
+  window.scrollTo(0, 0);
+}
+function val(id) { return document.getElementById(id).value; }
+function num(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  var n = Number(v);
+  return isNaN(n) ? null : n;
+}
+function fill(id, arr) {
+  document.getElementById(id).innerHTML = arr.map(function (v) {
+    return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
+  }).join('');
+}
+function setList(id, arr) {
+  document.getElementById(id).innerHTML = arr.map(function (v) {
+    return '<option value="' + esc(v) + '"></option>';
+  }).join('');
+}
+function uniq(a) { return a.filter(function (v, i) { return v !== '' && v !== undefined && v !== null && a.indexOf(v) === i; }); }
+function range(a, b) { var o = []; for (var i = a; i >= b; i--) o.push(i); return o; }
+function fmt(d) {
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+function esc(s) {
+  return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function clearFeel() {
+  var bs = document.querySelectorAll('.feel button');
+  for (var i = 0; i < bs.length; i++) bs[i].className = '';
+}
+function flash(k, t) {
+  var m = document.getElementById('msg');
+  m.className = 'msg ' + k; m.textContent = t;
+  setTimeout(function () { m.className = 'msg'; }, 6000);
+}
+function bkFlash(k, t) {
+  var m = document.getElementById('bkMsg');
+  m.className = 'msg ' + k; m.textContent = t;
+  setTimeout(function () { m.className = 'msg'; }, 8000);
+}
+
+/* 入力量に合わせて入力欄の高さを自動で広げる */
+function autosize(el) {
+  if (!el || !el.tagName || el.tagName.toLowerCase() !== 'textarea') return;
+  el.style.height = 'auto';
+  var border = el.offsetHeight - el.clientHeight;
+  var max = Math.round(window.innerHeight * 0.6);
+  var want = el.scrollHeight + border;
+  el.style.height = Math.min(want, max) + 'px';
+  el.style.overflowY = (want > max) ? 'auto' : 'hidden';
+}
+document.addEventListener('input', function (e) { autosize(e.target); });
+
+/* スマホでキーボードが出たとき、入力中の欄を画面内に引き上げる */
+(function () {
+  function isField(el) {
+    if (!el || !el.tagName) return false;
+    var t = el.tagName.toLowerCase();
+    return t === 'textarea' || (t === 'input' && el.type !== 'button' && el.type !== 'submit');
+  }
+  function bring() {
+    var el = document.activeElement;
+    if (isField(el) && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+  }
+  document.addEventListener('focusin', function (e) {
+    if (!isField(e.target)) return;
+    document.body.classList.add('kbopen');
+    setTimeout(bring, 100);
+    setTimeout(bring, 350);
+    setTimeout(bring, 700);
+  });
+  document.addEventListener('focusout', function (e) {
+    if (!isField(e.target)) return;
+    document.body.classList.remove('kbopen');
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () { setTimeout(bring, 60); });
+  }
+})();
+</script>
+</body>
+</html>
