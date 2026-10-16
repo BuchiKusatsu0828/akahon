@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>赤本記録</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#C1121F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="赤本記録">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <style>
   :root{
     --red:#C1121F;
@@ -127,6 +133,8 @@
   .sec p{margin:0;font-size:13px;color:var(--sub);line-height:1.75}
   #bkText{font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;min-height:90px}
   #rpText{font-size:12.5px;line-height:1.75;min-height:220px}
+  .pair{display:flex;gap:10px;margin-top:10px}
+  .pair .sub-btn{margin-top:0}
   .purpose{margin:4px 0 10px;padding:8px 12px;border-radius:5px;
     font-size:12.5px;font-weight:700;line-height:1.6}
   .purpose.send{background:#FDF3F3;color:var(--red)}
@@ -137,6 +145,18 @@
     font-size:13px;line-height:1.8
   }
   .openhint b{color:#8A5A00}
+  .bkwarn{
+    margin-top:14px;padding:11px 13px;background:#FDF3F3;border-left:4px solid var(--red);
+    font-size:13px;line-height:1.8
+  }
+  .bkwarn b{color:var(--red)}
+  #bkInfo.alert{color:var(--red);font-weight:700}
+  .again{
+    display:block;width:100%;margin-top:10px;padding:12px;
+    font:inherit;font-size:14px;font-weight:700;
+    border:1px solid var(--line);border-radius:6px;background:var(--fill);color:#333;cursor:pointer
+  }
+  .again:active{background:#EDEAE5}
   .mixup{margin-top:12px;font-size:13px;line-height:1.8;color:#333}
   .mixup b{color:var(--red)}
 
@@ -171,9 +191,12 @@
     </div>
 
     <div class="openhint hide" id="openHint"></div>
+    <div class="bkwarn hide" id="bkWarn"></div>
 
     <label>解いた日</label>
     <input type="date" id="fDate">
+
+    <button type="button" class="again hide" id="againBtn" onclick="useLast()"></button>
 
     <label>大学</label>
     <input type="text" id="fUniv" list="dlUniv" autocomplete="off" placeholder="例）同志社大学" oninput="onUniv()">
@@ -254,12 +277,16 @@
     <div class="sec">
       <h3>先生に送る</h3>
       <div class="purpose send">先生に見てもらうためのものです</div>
-      <p>まとめを作ってコピーし、Classroomにそのまま貼り付けてください。</p>
+      <p>まとめを作ってコピーし、Classroomにそのまま貼り付けてください。<br>
+         毎月の提出は<b>「今月の記録」</b>で大丈夫です。</p>
       <div class="mixup">
         自分の記録を守るための保存は、下の<b>「バックアップ」</b>です。<br>
         用途がちがうので、押し間違えないように気をつけてください。
       </div>
-      <button class="sub-btn" onclick="makeReport()">提出用のまとめを作る</button>
+      <div class="pair">
+        <button class="sub-btn" onclick="makeReport('month')">今月の記録</button>
+        <button class="sub-btn" onclick="makeReport('all')">すべての記録</button>
+      </div>
       <textarea id="rpText" class="hide" readonly></textarea>
       <button class="sub-btn hide" id="rpCopy" onclick="copyReport()">まとめをコピーする</button>
       <div class="msg" id="rpMsg"></div>
@@ -514,6 +541,36 @@ document.addEventListener('click', function (e) {
 });
 
 /* ============ 入力補助 ============ */
+function lastRecord() {
+  var best = null;
+  for (var i = 0; i < DATA.records.length; i++) {
+    var r = DATA.records[i];
+    if (!best || String(r.date) >= String(best.date)) best = r;
+  }
+  return best;
+}
+
+function drawAgain() {
+  var btn = document.getElementById('againBtn');
+  if (!btn) return;
+  var r = EDIT_ID ? null : lastRecord();
+  if (!r) { btn.className = 'again hide'; return; }
+  var who = r.univ + (r.fac ? ' ' + r.fac : '');
+  btn.className = 'again';
+  btn.textContent = '前回と同じ（' + who + '）を入れる';
+}
+
+function useLast() {
+  var r = lastRecord();
+  if (!r) return;
+  document.getElementById('fUniv').value = r.univ || '';
+  onUniv();
+  document.getElementById('fFac').value = r.fac || '';
+  onFac();
+  document.getElementById('fStyle').value = r.style || '';
+  calcNth();
+}
+
 function pickStyle(name) {
   var el = document.getElementById('fStyle');
   el.value = (el.value === name) ? '' : name;   // もう一度押すと解除
@@ -630,6 +687,7 @@ function save() {
 function setEditMode(on) {
   document.getElementById('editBar').className = on ? 'editbar' : 'editbar hide';
   document.getElementById('btn').textContent = on ? '更新する' : '記録する';
+  drawAgain();
 }
 
 function editRecord(id) {
@@ -786,6 +844,8 @@ function withNth(list) {
 
 function render() {
   drawOpenHint();
+  drawAgain();
+  drawBackupWarn();
   var rs = withNth(DATA.records);
   document.getElementById('tTotal').textContent = rs.length;
 
@@ -867,9 +927,14 @@ function saveFav() {
 }
 
 /* ============ 先生に送るまとめ ============ */
-function reportText() {
-  var rs = withNth(DATA.records).slice();
-  rs.sort(function (a, b) {
+/**
+ * 提出用のまとめを作る。
+ * まとめ部分（本数・平均）は常に全期間。明細だけ range で絞る。
+ *   range: 'month' … 今月ぶん  /  'all' … すべて
+ */
+function reportText(range) {
+  var all = withNth(DATA.records).slice();
+  all.sort(function (a, b) {
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
     return a.id < b.id ? -1 : 1;     // 同じ日は入力した順
   });
@@ -879,20 +944,20 @@ function reportText() {
   L.push(fmt(new Date()) + ' 時点');
   L.push('');
 
-  if (!rs.length) {
+  if (!all.length) {
     L.push('まだ記録がありません。');
     return L.join('\n');
   }
 
-  var days = uniq(rs.map(function (r) { return r.date; })).length;
-  L.push('全 ' + rs.length + '本 ／ 記録した日数 ' + days + '日');
-  L.push(rs[0].date + ' 〜 ' + rs[rs.length - 1].date);
+  var days = uniq(all.map(function (r) { return r.date; })).length;
+  L.push('全 ' + all.length + '本 ／ 記録した日数 ' + days + '日');
+  L.push(all[0].date + ' 〜 ' + all[all.length - 1].date);
   L.push('');
 
-  // 大学・科目別のまとめ
-  L.push('■ 大学・科目別');
+  // 大学・科目別のまとめ（常に全期間）
+  L.push('■ 大学・科目別（これまでの全体）');
   var g = {};
-  rs.forEach(function (r) {
+  all.forEach(function (r) {
     var k = r.univ + (r.fac ? ' ' + r.fac : '') + '／' + r.subject;
     (g[k] = g[k] || []).push(r);
   });
@@ -904,8 +969,23 @@ function reportText() {
   });
   L.push('');
 
-  // すべての記録
-  L.push('■ すべての記録（古い順）');
+  // 明細（期間で絞る）
+  var rs = all, title = '■ すべての記録（古い順）';
+
+  if (range === 'month') {
+    var now = new Date();
+    var ym = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2);
+    rs = all.filter(function (r) { return String(r.date).slice(0, 7) === ym; });
+    title = '■ ' + now.getFullYear() + '年' + (now.getMonth() + 1) + '月の記録（古い順）';
+  }
+
+  L.push(title);
+
+  if (!rs.length) {
+    L.push('（今月はまだ記録がありません）');
+    return L.join('\n');
+  }
+
   rs.forEach(function (r) {
     var head = r.date + ' '
              + r.univ + (r.fac ? ' ' + r.fac : '') + '／' + r.subject + ' '
@@ -929,14 +1009,16 @@ function reportText() {
   return L.join('\n');
 }
 
-function makeReport() {
+function makeReport(range) {
   if (!DATA.records.length) { rpFlash('ng', 'まだ記録がありません。'); return; }
 
   var t = document.getElementById('rpText');
-  t.value = reportText();
+  t.value = reportText(range);
   t.className = '';
   document.getElementById('rpCopy').className = 'sub-btn';
-  rpFlash('ok', 'まとめを作りました。コピーしてClassroomに貼り付けてください。');
+
+  rpFlash('ok', (range === 'month' ? '今月ぶん' : 'すべて')
+    + 'のまとめを作りました。コピーしてClassroomに貼り付けてください。');
 }
 
 function copyReport() {
@@ -958,12 +1040,61 @@ function copyReport() {
   }
 }
 
+function daysSince(ymd) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+  if (!m) return null;
+  var then = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  var n = new Date();
+  var today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  var d = Math.round((today - then) / 86400000);
+  return (d < 0) ? 0 : d;
+}
+
+/* none=記録なし / never=一度も / old=30日超 / ok=それ以外 */
+function backupState() {
+  var n = DATA.records.length;
+  if (!n) return { level: 'none', n: 0, days: null };
+  var d = daysSince(DATA.backupAt);
+  if (d === null) return { level: (n >= 5 ? 'never' : 'ok'), n: n, days: null };
+  if (d >= 30) return { level: 'old', n: n, days: d };
+  return { level: 'ok', n: n, days: d };
+}
+
+function drawBackupWarn() {
+  var el = document.getElementById('bkWarn');
+  if (!el) return;
+  var s = backupState();
+  var how = '「設定」→ バックアップ → コピー → 自分のメモアプリに貼って保管してください。';
+
+  if (s.level === 'never') {
+    el.className = 'bkwarn';
+    el.innerHTML = '<b>まだ一度もバックアップしていません。</b><br>'
+      + '記録はこの端末の中だけにあります。消えてしまうと、もう戻せません。<br>' + how;
+  } else if (s.level === 'old') {
+    el.className = 'bkwarn';
+    el.innerHTML = '<b>前回のバックアップから ' + s.days + '日</b> たっています。<br>'
+      + 'いま記録が消えると、この ' + s.days + '日ぶんは戻せません。<br>' + how;
+  } else {
+    el.className = 'bkwarn hide';
+  }
+}
+
 function drawBackupInfo() {
   var el = document.getElementById('bkInfo');
-  if (!DATA.records.length) { el.textContent = 'まだ記録がありません。'; return; }
-  el.textContent = DATA.backupAt
-    ? '記録 ' + DATA.records.length + '件　最後に書き出したのは ' + DATA.backupAt + ' です。'
-    : '記録 ' + DATA.records.length + '件　まだ一度も書き出していません。';
+  var s = backupState();
+
+  if (s.level === 'none') {
+    el.className = '';
+    el.textContent = 'まだ記録がありません。';
+  } else if (DATA.backupAt) {
+    el.className = (s.level === 'ok') ? '' : 'alert';
+    el.textContent = '記録 ' + s.n + '件　最後に書き出したのは ' + DATA.backupAt
+      + '（' + (s.days === 0 ? '今日' : s.days + '日前') + '）です。';
+  } else {
+    el.className = (s.level === 'ok') ? '' : 'alert';
+    el.textContent = '記録 ' + s.n + '件　まだ一度も書き出していません。';
+  }
+  drawBackupWarn();
 }
 
 function backupText() {
