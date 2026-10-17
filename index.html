@@ -103,13 +103,14 @@
   .hitcount{font-size:12px;color:var(--sub);margin-bottom:16px}
   .grp h3{margin:0 0 2px;font-size:16px}
   .grp .meta{font-size:12px;color:var(--sub);margin-bottom:9px}
-  .item{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:9px 0 9px 11px;border-left:3px solid var(--brand);border-bottom:1px solid var(--line)}
-  .item .pct{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:62px}
+  .item{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;padding:9px 0 9px 8px;border-left:3px solid var(--brand);border-bottom:1px solid var(--line)}
+  .item .pct{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:54px}
   .item .d{font-size:12px;color:var(--sub);flex:1}
-  .item .note{width:100%;font-size:13px;padding-left:11px;color:#333;white-space:pre-wrap}
+  .item .d .sg{white-space:nowrap}
+  .item .note{width:100%;font-size:13px;padding-left:8px;color:#333;white-space:pre-wrap}
   .item .acts{display:flex;flex-direction:column;gap:5px;flex:0 0 auto;align-self:flex-start}
   .item .acts button{
-    font:inherit;font-size:11px;padding:4px 11px;background:#fff;color:var(--sub);
+    font:inherit;font-size:11px;padding:4px 7px;background:#fff;color:var(--sub);
     border:1px solid var(--line);border-radius:99px;cursor:pointer;white-space:nowrap
   }
   .item .acts button:active{background:var(--fill)}
@@ -774,6 +775,28 @@ function delRecord(id) {
 }
 
 /* ============ 一覧 ============ */
+/* 項目ごとに途中で折り返さないよう、区切りでだけ改行させる */
+function segs(list) {
+  return list.map(function (t) { return '<span class="sg">' + t + '</span>'; }).join(' ・ ');
+}
+
+function line1(r) {
+  var a = [esc(r.year) + '年度' + (r.style ? ' ' + esc(r.style) : ''), r.nth + '回目'];
+  if (r.feel) a.push(esc(r.feel));
+  return a;
+}
+
+function line2(r) {
+  var a = [esc(r.date)];
+  if (r.minutes !== null && r.minutes !== undefined) {
+    a.push(r.minutes + '分' + (r.inTime ? ' ' + r.inTime : ''));
+  } else if (r.inTime) {
+    a.push(r.inTime);
+  }
+  if (r.score !== null && r.score !== undefined) a.push(r.score + '点');
+  return a;
+}
+
 function rebuildFilters() {
   var u = document.getElementById('fltUniv');
   var s = document.getElementById('fltSub');
@@ -899,10 +922,7 @@ function render() {
     g.forEach(function (r) {
       html += '<div class="item">'
             + '<div class="pct">' + (r.correct === null ? '—' : r.correct + '%') + '</div>'
-            + '<div class="d">' + esc(r.year) + '年度' + (r.style ? ' ' + esc(r.style) : '') + ' ・ ' + r.nth + '回目<br>'
-            + esc(r.date) + (r.minutes !== null ? ' ・ ' + r.minutes + '分' : '') + (r.inTime ? ' ' + r.inTime : '')
-            + (r.score !== null ? ' ・ ' + r.score + '点' : '') + (r.feel ? ' ・ ' + esc(r.feel) : '')
-            + '</div>'
+            + '<div class="d">' + segs(line1(r)) + '<br>' + segs(line2(r)) + '</div>'
             + '<div class="acts">'
             +   '<button data-edit="' + esc(r.id) + '">編集</button>'
             +   '<button class="del" data-del="' + esc(r.id) + '">削除</button>'
