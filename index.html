@@ -164,6 +164,27 @@
     border:1px solid var(--line);border-radius:6px;background:var(--fill);color:#333;cursor:pointer
   }
   .again:active{background:var(--brand-bg)}
+  /* 総合（全科目）の科目ごと入力 */
+  .part{margin-top:8px;padding:10px 11px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .ptop{display:flex;gap:8px;align-items:center}
+  .ptop select{flex:1;min-width:0}
+  .pdel{
+    font:inherit;font-size:12px;padding:6px 12px;border:1px solid var(--alert-line);
+    border-radius:99px;background:#fff;color:var(--alert);cursor:pointer;white-space:nowrap
+  }
+  .pnums{display:flex;align-items:center;gap:6px;margin-top:8px}
+  .pnums input{width:auto;flex:1;min-width:0;text-align:right;padding:10px 8px}
+  .pnums span{color:var(--sub);font-size:13px;flex:0 0 auto}
+  .addpart{
+    display:block;width:100%;margin-top:8px;padding:11px;font:inherit;font-size:14px;font-weight:700;
+    border:1px dashed var(--brand);border-radius:6px;background:#fff;color:var(--brand);cursor:pointer
+  }
+  .addpart:active{background:var(--brand-bg)}
+  .partsum{margin-top:10px;padding:10px 12px;background:var(--fill);border-left:4px solid var(--brand);font-size:14px;line-height:1.7}
+  .partsum b{font-size:17px}
+  .partsum small{color:var(--sub);font-size:12px}
+  .item .parts{width:100%;font-size:12.5px;padding-left:8px;color:#333}
+  .item .parts .sg{white-space:nowrap}
   .mixup{margin-top:12px;font-size:13px;line-height:1.8;color:#333}
   .mixup b{color:var(--brand)}
 
@@ -227,7 +248,7 @@
       </div>
       <div>
         <label>科目</label>
-        <select id="fSubject" onchange="calcNth()"></select>
+        <select id="fSubject" onchange="onSubject()"></select>
       </div>
     </div>
 
@@ -244,15 +265,24 @@
       </div>
     </div>
 
-    <div class="row">
-      <div>
-        <label>得点 <span>（点・任意）</span></label>
-        <input type="number" id="fScore" inputmode="decimal" min="0" max="1000">
+    <div id="singleBox">
+      <div class="row">
+        <div>
+          <label>得点 <span>（点・任意）</span></label>
+          <input type="number" id="fScore" inputmode="decimal" min="0" max="1000">
+        </div>
+        <div>
+          <label>正解率 <span>（%）</span></label>
+          <input type="number" id="fCorrect" inputmode="decimal" min="0" max="100">
+        </div>
       </div>
-      <div>
-        <label>正解率 <span>（%）</span></label>
-        <input type="number" id="fCorrect" inputmode="decimal" min="0" max="100">
-      </div>
+    </div>
+
+    <div id="partsBox" class="hide">
+      <label>科目ごとの結果 <span>（得点と満点を入れると正解率は自動で出ます）</span></label>
+      <div id="parts"></div>
+      <button type="button" class="addpart" onclick="addPart()">＋ 科目を追加</button>
+      <div class="partsum" id="partSum"></div>
     </div>
 
     <label>手応え</label>
@@ -544,6 +574,150 @@ document.addEventListener('click', function (e) {
   }
 });
 
+/* ============ 総合（全科目） ============ */
+var TOTAL = '総合（全科目）';
+
+function onSubject() {
+  var t = val('fSubject') === TOTAL;
+  document.getElementById('singleBox').className = t ? 'hide' : '';
+  document.getElementById('partsBox').className = t ? '' : 'hide';
+  if (t && !document.querySelectorAll('#parts .part').length) { addPart(); addPart(); }
+  drawPartSum();
+  calcNth();
+}
+
+function pv(x) { return (x === null || x === undefined) ? '' : String(x); }
+
+function partHtml(p) {
+  p = p || {};
+  var list = SUBJECTS.filter(function (s) { return s !== TOTAL; });
+  if (p.subject && list.indexOf(p.subject) < 0) list.push(p.subject);
+  var opts = list.map(function (s) {
+    return '<option value="' + esc(s) + '"' + (s === p.subject ? ' selected' : '') + '>' + esc(s) + '</option>';
+  }).join('');
+  return '<div class="part">'
+    + '<div class="ptop">'
+    +   '<select class="pSub"><option value="">科目を選ぶ</option>' + opts + '</select>'
+    +   '<button type="button" class="pdel" data-pdel="1">削除</button>'
+    + '</div>'
+    + '<div class="pnums">'
+    +   '<input type="number" class="pScore" inputmode="decimal" min="0" placeholder="得点" value="' + esc(pv(p.score)) + '">'
+    +   '<span>/</span>'
+    +   '<input type="number" class="pFull" inputmode="decimal" min="0" placeholder="満点" value="' + esc(pv(p.full)) + '">'
+    +   '<span>→</span>'
+    +   '<input type="number" class="pPct" inputmode="decimal" min="0" max="100" placeholder="正解率" value="' + esc(pv(p.correct)) + '">'
+    +   '<span>%</span>'
+    + '</div></div>';
+}
+
+function addPart(p) {
+  document.getElementById('parts').insertAdjacentHTML('beforeend', partHtml(p));
+  drawPartSum();
+}
+
+function readParts() {
+  var rows = document.querySelectorAll('#parts .part');
+  var out = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var p = {
+      subject: r.querySelector('.pSub').value,
+      score: num(r.querySelector('.pScore').value),
+      full: num(r.querySelector('.pFull').value),
+      correct: num(r.querySelector('.pPct').value)
+    };
+    if (!p.subject && p.score === null && p.full === null && p.correct === null) continue;   // 空の行は無視
+    out.push(p);
+  }
+  return out;
+}
+
+/* 全体の正解率：全科目に得点と満点があれば合計から、なければ各科目の平均 */
+function partTotals(parts) {
+  var n = parts.length;
+  var allScore = n > 0 && parts.every(function (p) { return p.score !== null && p.score !== undefined; });
+  var allFull = allScore && parts.every(function (p) { return p.full !== null && p.full !== undefined && p.full > 0; });
+  var sumS = allScore ? parts.reduce(function (a, p) { return a + p.score; }, 0) : null;
+  var sumF = allFull ? parts.reduce(function (a, p) { return a + p.full; }, 0) : null;
+
+  var pct = null, basis = '';
+  if (allFull && sumF > 0) {
+    pct = sumS / sumF * 100; basis = 'score';
+  } else {
+    var w = parts.filter(function (p) { return p.correct !== null && p.correct !== undefined; });
+    if (n > 0 && w.length === n) {
+      pct = w.reduce(function (a, p) { return a + p.correct; }, 0) / n; basis = 'avg';
+    }
+  }
+  return {
+    score: sumS === null ? null : Math.round(sumS * 10) / 10,
+    full: sumF,
+    pct: pct === null ? null : Math.round(pct * 10) / 10,
+    basis: basis
+  };
+}
+
+function drawPartSum() {
+  var el = document.getElementById('partSum');
+  if (!el) return;
+  var parts = readParts();
+  if (!parts.length) { el.innerHTML = '<small>科目を選んで、結果を入れてください。</small>'; return; }
+  var t = partTotals(parts);
+  if (t.pct === null) {
+    el.innerHTML = '<small>すべての科目に正解率が入ると、全体の正解率が出ます。</small>';
+    return;
+  }
+  el.innerHTML = '全体 <b>' + t.pct + '%</b>'
+    + (t.full !== null ? '　合計 ' + t.score + ' / ' + t.full + '点' : (t.score !== null ? '　合計 ' + t.score + '点' : ''))
+    + '<br><small>' + (t.basis === 'score' ? '得点の合計から計算しています' : '各科目の正解率の平均です') + '</small>';
+}
+
+function partLabel(p) {
+  return esc(p.subject) + ' ' + (p.correct === null || p.correct === undefined ? '—' : p.correct + '%')
+    + ((p.score !== null && p.score !== undefined)
+        ? '（' + p.score + ((p.full !== null && p.full !== undefined) ? '/' + p.full : '') + '点）' : '');
+}
+
+/* 保存後：科目の並びは残し、数字だけ消す（同じ組み合わせを続けて解くことが多いため） */
+function clearPartNumbers() {
+  var rows = document.querySelectorAll('#parts .part');
+  for (var i = 0; i < rows.length; i++) {
+    rows[i].querySelector('.pScore').value = '';
+    rows[i].querySelector('.pFull').value = '';
+    rows[i].querySelector('.pPct').value = '';
+  }
+  drawPartSum();
+}
+
+document.getElementById('parts').addEventListener('input', function (e) {
+  var t = e.target;
+  var row = t && t.closest ? t.closest('.part') : null;
+  if (!row) return;
+  if (t.classList.contains('pScore') || t.classList.contains('pFull')) {
+    var sc = num(row.querySelector('.pScore').value);
+    var fu = num(row.querySelector('.pFull').value);
+    if (sc !== null && fu !== null && fu > 0) {
+      row.querySelector('.pPct').value = Math.round(sc / fu * 1000) / 10;
+    }
+  }
+  drawPartSum();
+});
+document.getElementById('parts').addEventListener('change', drawPartSum);
+document.getElementById('parts').addEventListener('click', function (e) {
+  var t = e.target;
+  if (!t || !t.getAttribute || !t.getAttribute('data-pdel')) return;
+  var row = t.closest('.part');
+  if (document.querySelectorAll('#parts .part').length <= 1) {
+    row.querySelector('.pSub').value = '';
+    row.querySelector('.pScore').value = '';
+    row.querySelector('.pFull').value = '';
+    row.querySelector('.pPct').value = '';
+  } else {
+    row.parentNode.removeChild(row);
+  }
+  drawPartSum();
+});
+
 /* ============ 入力補助 ============ */
 function lastRecord() {
   var best = null;
@@ -642,6 +816,29 @@ function save() {
   };
 
   if (!p.date || !p.univ || !p.year || !p.subject) { flash('ng', '日付・大学・年度・科目を入力してください。'); return; }
+
+  if (p.subject === TOTAL) {
+    var parts = readParts();
+    var orig = null;
+    if (EDIT_ID) DATA.records.forEach(function (x) { if (x.id === EDIT_ID) orig = x; });
+
+    if (!parts.length && orig && !orig.parts && orig.correct !== null) {
+      // 科目ごと入力ができる前に記録した「総合」は、そのまま残す
+      p.correct = orig.correct; p.score = orig.score;
+    } else {
+      if (!parts.length) { flash('ng', '科目ごとの結果を1つ以上入れてください。'); return; }
+      for (var k = 0; k < parts.length; k++) {
+        if (!parts[k].subject) { flash('ng', '科目を選んでいない行があります。'); return; }
+        var c = parts[k].correct;
+        if (c === null || c < 0 || c > 100) { flash('ng', parts[k].subject + 'の正解率を0〜100で入れてください。'); return; }
+      }
+      var tot = partTotals(parts);
+      p.parts = parts;
+      p.correct = tot.pct;
+      p.score = tot.score;
+    }
+  }
+
   if (p.correct === null || p.correct < 0 || p.correct > 100) { flash('ng', '正解率を0〜100で入力してください。'); return; }
 
   document.getElementById('fUniv').value = p.univ;
@@ -673,6 +870,7 @@ function save() {
   ['fMin','fLim','fCorrect','fScore','fNote'].forEach(function (id) {
     document.getElementById(id).value = '';
   });
+  clearPartNumbers();
   autosize(document.getElementById('fNote'));
   FEEL = ''; clearFeel();
 
@@ -714,7 +912,10 @@ function editRecord(id) {
   document.getElementById('fNote').value    = r.note || '';
 
   setSelect('fYear', r.year);
+  document.getElementById('parts').innerHTML = '';
+  if (r.parts && r.parts.length) r.parts.forEach(function (x) { addPart(x); });
   setSelect('fSubject', r.subject);
+  onSubject();
 
   FEEL = r.feel || '';
   clearFeel();
@@ -743,6 +944,8 @@ function resetForm() {
     document.getElementById(id).value = '';
   });
   FEEL = ''; clearFeel();
+  document.getElementById('parts').innerHTML = '';
+  onSubject();
   autosize(document.getElementById('fNote'));
   onUniv();
 }
@@ -793,7 +996,10 @@ function line2(r) {
   } else if (r.inTime) {
     a.push(r.inTime);
   }
-  if (r.score !== null && r.score !== undefined) a.push(r.score + '点');
+  if (r.score !== null && r.score !== undefined) {
+    var tf = (r.parts && r.parts.length) ? partTotals(r.parts).full : null;
+    a.push(r.score + (tf !== null ? '/' + tf : '') + '点');
+  }
   return a;
 }
 
@@ -927,6 +1133,9 @@ function render() {
             +   '<button data-edit="' + esc(r.id) + '">編集</button>'
             +   '<button class="del" data-del="' + esc(r.id) + '">削除</button>'
             + '</div>'
+            + (r.parts && r.parts.length
+                ? '<div class="parts">' + r.parts.map(function (x) { return '<span class="sg">' + partLabel(x) + '</span>'; }).join(' ・ ') + '</div>'
+                : '')
             + (r.note ? '<div class="note">' + esc(r.note) + '</div>' : '')
             + '</div>';
     });
@@ -1024,10 +1233,20 @@ function reportText(range) {
            + ((r.limit !== null && r.limit !== undefined) ? '／制限' + r.limit + '分' : '')
            + (r.inTime ? ' ' + r.inTime : ''));
     }
-    if (r.score !== null && r.score !== undefined) t.push(r.score + '点');
+    if (r.score !== null && r.score !== undefined) {
+      var tf = (r.parts && r.parts.length) ? partTotals(r.parts).full : null;
+      t.push(r.score + (tf !== null ? '/' + tf : '') + '点');
+    }
     if (r.feel) t.push(r.feel);
 
     L.push(head + '　｜　' + t.join('　｜　'));
+    if (r.parts && r.parts.length) {
+      L.push('　内訳：' + r.parts.map(function (x) {
+        return x.subject + ' ' + (x.correct === null || x.correct === undefined ? '—' : x.correct + '%')
+          + ((x.score !== null && x.score !== undefined)
+              ? '（' + x.score + ((x.full !== null && x.full !== undefined) ? '/' + x.full : '') + '点）' : '');
+      }).join(' ／ '));
+    }
     if (r.note) L.push('　→ ' + String(r.note).replace(/\s*\n\s*/g, ' '));
   });
 
